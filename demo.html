@@ -1,0 +1,171 @@
+<head>
+  <style>
+    body {
+      margin: 0;
+      background-color: aqua;
+    }
+  </style>
+
+  <script src="//unpkg.com/three"></script>
+  <script src="//unpkg.com/satellite.js/dist/satellite.min.js"></script>
+  <script src="//unpkg.com/globe.gl"></script>
+</head>
+
+<body>
+  <div id="globeViz"></div>
+  <div id="chart"></div>
+
+  <script>
+
+
+    //satellite--------------------------------------------------------------------------------
+
+    const EARTH_RADIUS_KM = 6371; // km
+    const SAT_SIZE = 100; // km
+    const TIME_STEP = 500; // per frame
+
+    //html mark--------------------------------------------------------------------------------
+
+    const markerSvg = `<svg viewBox="0 0 36 36">
+    <circle fill="currentColor" cx="14" cy="14" r="7"></circle>
+  </svg>`;
+
+    //info
+    const gData =
+      [
+        {
+          "label": "قلب",
+          "program": "Arabic",
+          "agency": "Ramsey Nasser",
+          "date": "2012",
+          "url": "http://nas.sr/---/",
+          "lat": 40.7128,
+          "lng": -74.0060,
+          "user": "?"
+        },
+        {
+          "label": "Chinese Python",
+          "program": "Chinese",
+          "agency": "Chinese Python Dev Team",
+          "date": "2002",
+          "url": "http://chinesepython.org/",
+          "lat": 22.3193,
+          "lng": 114.177216,
+          "user": "5,727"
+        }
+      ];
+
+    const elem = document.getElementById('globeViz');
+    const labelsTopOrientation = new Set(['Apollo 12', 'Luna 2']); // avoid label collisions
+
+    //----------------------------------------globe----------------------------------------
+    const world = Globe()
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .atmosphereColor("#0070FF")
+      .atmosphereAltitude(0.6)
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .backgroundColor('rgba(0, 0, 0, 0)')
+
+      (document.getElementById('chart'))
+      .objectLat('lat')
+      .objectLng('lng')
+      .objectAltitude('alt')
+      .objectLabel('name')
+      //.onObjectClick(d => window.open(d.url, '_blank'))
+
+      //html mark--------------------------------------------------------------------------------
+
+      .htmlElementsData(gData)
+      .htmlElement(d => {
+        const el = document.createElement('div');
+        el.innerHTML = markerSvg;
+        el.style.color = '#6cff00';
+        el.style.width = 50;
+        el.style['pointer-events'] = 'auto';
+        el.style.cursor = 'pointer';
+        el.onclick = () => window.open(d.url, '_blank');
+        return el;
+      })
+
+      //label & tooltip
+      .labelText('label')
+      .labelSize(1.7)
+      .labelDotRadius(3)
+      .labelDotOrientation(d => labelsTopOrientation.has(d.label) ? 'top' : 'bottom')
+      .labelColor(() => 'transparent')
+      .labelLabel(d => `
+      <div style="background:#66ccff">
+        <div><b>${d.label}</b></div>
+        <div>${d.program}</div>
+        <div>${d.agency}</div>
+        <div>${d.date}</div>
+        <!--<div>Launched on <i>${new Date(d.date).toLocaleDateString()}</i></div>-->
+        </div>
+      `)//Question: how to run html code in tooltip?
+      .onLabelClick(d => window.open(d.url, '_blank'))
+      (elem);
+    world.labelsData(gData);
+    (document.getElementById('globeViz'));
+
+    //window resize--------------------------------------------------------------------------------
+    
+    window.addEventListener('resize', (event) => {
+      world.width([event.target.innerWidth])
+      world.height([event.target.innerHeight])
+    });
+
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 50, 1000);//not working
+    world.scene().add(cam);
+    world.renderer(() => new THREE.WebGLRenderer({ antialias: false }));
+
+    //setTimeout(() => world.pointOfView({ altitude: 3.5 }));
+
+    //satellite--------------------------------------------------------------------------------
+    //const satGeometry = new THREE.OctahedronGeometry(5 * SAT_SIZE * world.getGlobeRadius() / EARTH_RADIUS_KM / 2, 5);
+    const satGeometry = new THREE.OctahedronGeometry(5, 5);
+    const satMaterial = new THREE.MeshBasicMaterial({ color: 0x6cff00 });
+    world.objectThreeObject(() => new THREE.Mesh(satGeometry, satMaterial));
+
+    fetch('../datasets/space-track-leo2.txt').then(r => r.text()).then(rawData => {
+      const tleData = rawData.replace(/\r/g, '')
+        .split(/\n(?=[^12])/)
+        .filter(d => d)
+        .map(tle => tle.split('\n'));
+      const satData = tleData.map(([name, ...tle]) => ({
+        satrec: satellite.twoline2satrec(...tle),
+        name: name.trim().replace(/^0 /, '')
+      }))
+      /*
+      const satData = tleData.map(([name, line1, line2, date]) => ({
+        satrec: satellite.twoline2satrec(line1, line2),
+        name: name.trim().replace(/^0 /, ''),
+        date: date.trim()
+          }))
+      */
+        // exclude those that can't be propagated
+        .filter(d => !!satellite.propagate(d.satrec, new Date()).position)
+        .slice(0, 2000);
+
+      // time ticker
+      let time = new Date();
+      (function frameTicker() {
+        requestAnimationFrame(frameTicker);
+        time = new Date(+time + TIME_STEP);
+
+        // Update satellite positions
+        const gmst = satellite.gstime(time);
+        satData.forEach(d => {
+          const eci = satellite.propagate(d.satrec, time);
+          if (eci.position) {
+            const gdPos = satellite.eciToGeodetic(eci.position, gmst);
+            d.lat = satellite.radiansToDegrees(gdPos.latitude);
+            d.lng = satellite.radiansToDegrees(gdPos.longitude);
+            d.alt = gdPos.height / EARTH_RADIUS_KM
+          }
+        });
+
+        world.objectsData(satData);
+      })();
+    });
+  </script>
+</body>
