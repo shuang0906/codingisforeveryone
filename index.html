@@ -1,0 +1,36 @@
+<head>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-image: url("https://freight.cargo.site/w/315/i/71cf8d01d7b861b6fd411b9a3ac3eeffdb906a8dcb56044f362a16a18fd95291/Backgrounds.jpg");
+      background-repeat: repeat;
+    }
+
+    .title-bar {
+      cursor: move;
+      z-index: 10;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://unpkg.com/98.css" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+  <script src="//unpkg.com/three"></script>
+  <script src="//unpkg.com/satellite.js/dist/satellite.min.js"></script>
+  <script src="//unpkg.com/globe.gl"></script>
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+  <script type="importmap">
+    {
+                "imports": {
+                    "three": "https://unpkg.com/three@v0.151.0/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three@v0.151.0/examples/jsm/"
+                }
+            }
+        </script>
+</head>
+
+<body>
+  <div id="globeViz"></div>
+  <script type="module" src="demoCustomLayer.js"></script>
+  <script src="popup.js"></script>
+</body>
