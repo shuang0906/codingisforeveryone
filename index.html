@@ -1,0 +1,273 @@
+<html>
+
+<head>
+  <style>
+    #defaultCanvas0 {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXojJdhqvVeOduvxd9UL4UfmpKycmPKkNL75jKNinWdPhYbrzCaB_eG3Lw3oVegBN4Umg&usqp=CAU");
+      background-repeat: repeat;
+    }
+
+    .window {
+      position: absolute;
+      top: 0%;
+      left: 0%;
+      z-index: 10000;
+    }
+
+    .title-bar {
+      cursor: move;
+      z-index: 10;
+    }
+
+    .appended-div {
+      position: absolute;
+    }
+
+    .meter {
+      box-sizing: content-box;
+      height: 5px;
+      position: relative;
+      margin: 10px 0 15px 0;
+      background: #555;
+      padding: 0px;
+    }
+
+    .meter>span {
+      display: block;
+      height: 100%;
+      background-color: rgb(0, 255, 68);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .meter>span:after,
+    .animate>span>span {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      z-index: 1;
+      background-size: 50px 50px;
+      animation: move 2s linear infinite;
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+      overflow: hidden;
+    }
+
+    @keyframes move {
+      0% {
+        background-position: 0 0;
+      }
+
+      100% {
+        background-position: 50px 50px;
+      }
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://unpkg.com/98.css" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.3.0/p5.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5.glitch@latest/p5.glitch.js"></script>
+
+  <script src="https://code.jquery.com/jquery-3.6.4.js" integrity="sha256-a9jBBRygX1Bh5lt8GZjXDzyOB+bWve9EiO7tROUtj/E="
+    crossorigin="anonymous"></script>
+
+  <script src="//unpkg.com/three"></script>
+  <script src="//unpkg.com/satellite.js/dist/satellite.min.js"></script>
+  <script src="//unpkg.com/globe.gl"></script>
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+  <script type="importmap">
+    {
+                "imports": {
+                    "three": "https://unpkg.com/three@v0.151.0/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three@v0.151.0/examples/jsm/"
+                }
+            }
+        </script>
+</head>
+
+<body>
+  <div id="globeViz"></div>
+  <script src="sketch.js"></script>
+
+  <script type="module" src="globe.js"></script>
+
+  <div class="window" id="window1" style="width: 250px;">
+    <div class="title-bar">
+      <div class="title-bar-text">
+        Coding is for everyone
+      </div>
+
+      <div class="title-bar-controls">
+        <button aria-label="Minimize" onclick="minWindow()"></button>
+        <button id="resizeWindow" aria-label="Maximize" onclick="maxWindow()"></button>
+        <button aria-label="Close" onclick="closeWindow()"></button>
+      </div>
+    </div>
+    <div class="window-body" id="window-body" style="display:contents;">
+      <p>Hello, world!</p>
+      <section class="field-row" style="justify-content: flex-end">
+        <button>OK</button>
+        <button>Cancel</button>
+      </section>
+    </div>
+  </div>
+</body>
+
+</html>
+
+<script>
+  function closeWindow() {
+    document.getElementByClass("window1").style.display = "none";
+  }
+  function maxWindow() {
+    document.getElementById("window1").style.width = "100%";
+    document.getElementById("window1").style.height = "100vh";
+    document.getElementById("window1").style.top = "0";
+    document.getElementById("window1").style.left = "0";
+    document.getElementById("resizeWindow").setAttribute("aria-label", "Restore");
+    document.getElementById("resizeWindow").setAttribute("onclick", "restoreWindow()");
+  }
+  function restoreWindow() {
+    document.getElementById("window1").style.width = "250px";
+    document.getElementById("window1").style.height = "auto";
+    document.getElementById("resizeWindow").setAttribute("onclick", "maxWindow()");
+  }
+  var windowState = "restored";
+  function minWindow() {
+    if (windowState == "minimized") {
+      document.getElementById("window-body").style.display = "contents";
+      windowState = "restored";
+      console.log(windowState);
+    } else if (windowState == "restored") {
+      document.getElementById("window-body").style.display = "none";
+      windowState = "minimized";
+      console.log(windowState);
+    }
+  }
+
+  // draggable element
+  dragElement(document.getElementById("window1"));
+
+  function dragElement(elmnt) {
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    if (document.getElementById("title-bar")) {
+      /* if present, the header is where you move the DIV from:*/
+      document.getElementById("title-bar").onmousedown = dragMouseDown;
+    } else {
+      /* otherwise, move the DIV from anywhere inside the DIV:*/
+      elmnt.onmousedown = dragMouseDown;
+    }
+
+    function dragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      // get the mouse cursor position at startup:
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      // call a function whenever the cursor moves:
+      document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      // calculate the new cursor position:
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      // set the element's new position:
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragElement() {
+      /* stop moving when mouse button is released:*/
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  }
+
+  $(".meter > span").each(function () {
+    $(this)
+      .data("origWidth", $(this).width())
+      .width(0)
+      .animate(
+        {
+          width: $(this).data("origWidth")
+        },
+        1200
+      );
+  });
+</script>
+
+<script>
+
+  window.onload = function () {
+    var backgroundImg = [
+      "https://freight.cargo.site/w/315/i/71cf8d01d7b861b6fd411b9a3ac3eeffdb906a8dcb56044f362a16a18fd95291/Backgrounds.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/24.gif",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_3.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/35.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_1.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_23.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_3.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_5.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_2.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_17.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_15.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_25.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_18.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_20.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_21.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_22.jpg",
+      "http://cs.gettysburg.edu/~duncjo01/archive/patterns/gdpit/Sky/b_24.jpg",
+      
+      /*
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxUi-tnLg7bksj9aU3WT0p9pNdaeyyt15T_mwlEiFEIRie1S_-CEGus4VECYaQQQQ7818&usqp=CAU",
+      "https://64.media.tumblr.com/31ccc2317072f0c8404b4a78c17e6e53/e9e22e92578d6d23-6d/s400x600/322377fdb12bd4cd9bea4d7cb408eb8dc0da277f.png",
+      "https://44.media.tumblr.com/98db6ef8e77d036075b8f351902bb58d/485d779385c544e4-69/s250x400_f1/8479f82ed60a5e294e8ef2bed1eade9392abd03d.gif",
+      "https://64.media.tumblr.com/6455faa31c46d913d0562feaef1906ae/3930eb25d2f43a09-a0/s250x400/173471551b427cfec06406b67b9367138cf16a6f.png",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcToCTQMXTogafLaua-Xd_YYTQ5umRgRh8CCHldadWGcWub0G6xFhBUjAkcpvRpy1nrunJI&usqp=CAU",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSmkLFkcRfrYySnXh4UJOVz60KeDbgpQZkM6Q&usqp=CAU",
+      "https://64.media.tumblr.com/f52ddf6a216fdc5fb9d4eca8f27c8eec/782d8db93ae19c51-b2/s250x400/62877c4fd5d3b407c3d742a0c2f0ff774687b2ae.png",
+      "https://www.geocities.ws/ratusnorvegicus/electricwaves.gif",
+      "https://64.media.tumblr.com/af6da3feaa34ecc7bb2b36d877e4a235/782d8db93ae19c51-b7/s250x400/8122a57141958bd9b065d3b246621c59f116e081.png",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuBrcGcL25B94IM9dV5rAGieXaw2uHwHZ-tg&usqp=CAU",
+      "https://untroubled.org/backgrounds/red/flames.jpg"*/
+    ]
+
+    setInterval(changeImage, 10000);
+    setInterval(function () { showDiv(); setTimeout(function () { hideDiv(); }, 500); }, 10000);
+
+    function showDiv() {
+      document.getElementById("defaultCanvas0").style.display = "block";
+    }
+    function hideDiv() {
+      document.getElementById("defaultCanvas0").style.display = "none";
+    }
+
+    function changeImage() {
+      var i = Math.floor((Math.random() * backgroundImg.length));
+
+      document.body.style.backgroundImage = "url('" + backgroundImg[i] + "')";
+
+    }
+  }
+</script>
